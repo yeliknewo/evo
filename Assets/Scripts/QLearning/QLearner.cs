@@ -4,20 +4,19 @@ using UnityEngine;
 
 //http://www.cse.unsw.edu.au/~cs9417ml/RL1/source/CatAndMouseWorld.java
 
-public class QLearner : MonoBehaviour
+public class QLearner
 {
 	private RLWorld world;
 	private RLPolicy policy;
 
 	private double alpha;   //1.0
 	private double gamma; //0.1
-	private double lambda; //0.1
+	//private double lambda; //0.1
 	private double epsilon; //0.1
 
 	List<int> dimSize, state, newState;
 	int action;
 	double reward;
-	bool random = false;
 
 	public QLearner(RLWorld world)
 	{
@@ -33,7 +32,7 @@ public class QLearner : MonoBehaviour
 
 		alpha = 1;
 		gamma = 0.1;
-		lambda = 0.1;
+		//lambda = 0.1;
 	}
 
 	public void RunEpoch()
@@ -68,8 +67,6 @@ public class QLearner : MonoBehaviour
 
 		//E greedy
 
-		random = false;
-
 		double maxQ = double.MinValue;
 
 		List<int> doubleValues = new List<int>();
@@ -79,7 +76,6 @@ public class QLearner : MonoBehaviour
 		if (Random.value < epsilon)
 		{
 			selectedAction = -1;
-			random = true;
 		}
 		else
 		{
@@ -90,25 +86,33 @@ public class QLearner : MonoBehaviour
 					selectedAction = action;
 					maxQ = qValues[action];
 					maxDV = 0;
+					while (doubleValues.Count <= maxDV)
+					{
+						doubleValues.Add(0);
+					}
 					doubleValues[maxDV] = selectedAction;
 				}
 				else if (qValues[action] == maxQ)
 				{
 					maxDV++;
+					while (doubleValues.Count <= maxDV)
+					{
+						doubleValues.Add(0);
+					}
 					doubleValues[maxDV] = action;
 				}
 			}
-			if(maxDV > 0)
+			if (maxDV > 0)
 			{
 				int randomIndex = Random.Range(0, maxDV);
 				selectedAction = doubleValues[randomIndex];
 			}
 		}
-		if(selectedAction == -1)
+		if (selectedAction == -1)
 		{
 			selectedAction = Random.Range(0, qValues.Count);
 		}
-		while(!world.IsValidAction(selectedAction))
+		while (!world.IsValidAction(selectedAction))
 		{
 			selectedAction = Random.Range(0, qValues.Count);
 		}
@@ -120,9 +124,9 @@ public class QLearner : MonoBehaviour
 		double maxQ = 0;
 		List<double> qValues = policy.GetQValuesAt(state);
 
-		for(action = 0; action < qValues.Count; action++)
+		for (action = 0; action < qValues.Count; action++)
 		{
-			if(qValues[action] > maxQ)
+			if (qValues[action] > maxQ)
 			{
 				maxQ = qValues[action];
 			}

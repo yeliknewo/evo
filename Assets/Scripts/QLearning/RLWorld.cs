@@ -2,18 +2,18 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class RLWorld : MonoBehaviour
+public class RLWorld
 {
 	private const int NUM_OBJECTS = 6;
 	private const int NUM_ACTIONS = 8;
 	private const int WALL_TRIALS = 100;
 	private const double INIT_VALS = 0.0;
 
-	private int bx, by, mx, my, cx, cy, chx, chy, hx, hy;
-	private bool gotCheese = false;
+	private int bx, by, mx, my, cx, cy, chx, chy;
 
 	private int catScore = 0, mouseScore = 0;
 	private int cheeseReward = 50, deathPenalty = 100;
+	private int maxMouseScore = 0;
 
 	List<int> state;
 	double waitingReward;
@@ -23,7 +23,7 @@ public class RLWorld : MonoBehaviour
 	{
 		bx = x;
 		by = y;
-		makeWalls(x, y, numWalls);
+		MakeWalls(x, y, numWalls);
 
 		ResetState();
 	}
@@ -34,12 +34,12 @@ public class RLWorld : MonoBehaviour
 
 		int i;
 
-		for (i = 0; i < NUM_OBJECTS;)
+		for (i = 0; i < NUM_OBJECTS;i += 2)
 		{
-			retDim[i++] = bx;
-			retDim[i++] = by;
+			retDim.Add(bx);
+			retDim.Add(by);
 		}
-		retDim[i] = NUM_ACTIONS;
+		retDim.Add(NUM_ACTIONS);
 
 		return retDim;
 	}
@@ -55,13 +55,9 @@ public class RLWorld : MonoBehaviour
 			mx = ax;
 			my = ay;
 		}
-		else
-		{
-			//illegal action
-		}
 
-		moveCat();
-		waitingReward = calcReward();
+		MoveCat();
+		waitingReward = CalcReward();
 
 		if ((mx == chx) && (my == chy))
 		{
@@ -70,12 +66,7 @@ public class RLWorld : MonoBehaviour
 			chx = d[1];
 		}
 
-		if ((mx == cx) && (my == cy))
-		{
-			d = GetRandomPos();
-			mx = d[0];
-			my = d[1];
-		}
+		//Debug.Log("RLWorld: bx: " + bx + ", by: " + by + ", mx: " + mx + ", my: " + my + ", cx: " + cx + ", cy: " + cy + ", chx: " + chx + ", chy: " + chy + ", hx: " + hx + ", hy: " + hy);
 
 		return GetState();
 	}
@@ -103,6 +94,11 @@ public class RLWorld : MonoBehaviour
 
 	public List<int> ResetState()
 	{
+		if (mouseScore > maxMouseScore)
+		{
+			maxMouseScore = mouseScore;
+			Debug.Log("New Max Mouse Score: " + maxMouseScore);
+		}
 		catScore = 0;
 		mouseScore = 0;
 		SetRandomPos();
@@ -114,15 +110,106 @@ public class RLWorld : MonoBehaviour
 		return INIT_VALS;
 	}
 
+	private int[] GetNewPos(int x, int y, int tx, int ty)
+	{
+		int ax = x;
+		int ay = y;
+
+		if (tx == x)
+		{
+			ax = x;
+		}
+		else
+		{
+			ax += (tx - x) / Mathf.Abs(tx - x);
+		}
+		if (ty == y)
+		{
+			ay = y;
+		}
+		else
+		{
+			ay += (ty - y) / Mathf.Abs(ty - y);
+		}
+
+		if (IsLegal(ax, ay))
+		{
+			return new int[] { ax, ay };
+		}
+
+		while (true)
+		{
+			ax = x;
+			ay = y;
+			ax += Random.Range(-1, 1);
+			ay += Random.Range(-1, 1);
+
+			if (IsLegal(ax, ay))
+			{
+				return new int[] { ax, ay };
+			}
+		}
+	}
+
+	private void MoveCat()
+	{
+		int[] d = GetNewPos(cx, cy, mx, my);
+		cx = d[0];
+		cy = d[1];
+	}
+
+	private void MoveMouse()
+	{
+		int[] d = GetNewPos(mx, my, chx, chy);
+		mx = d[0];
+		my = d[1];
+	}
+
+	private int MouseAction()
+	{
+		int[] d = GetNewPos(mx, my, chx, chy);
+		return GetAction(d[0] - mx, d[1] - my);
+	}
+
+	private int GetAction(int x, int y)
+	{
+		int[,] vals = { { 7, 0, 1 }, { 6, 0, 2 }, { 5, 4, 3 } };
+		if ((x < -1) || (x > 1) || (y < -1) || (y > 1) || ((y == 0) && (x == 0)))
+		{
+			return -1;
+		}
+		int retVal = vals[y + 1, x + 1];
+		return retVal;
+	}
+
+	private int[] GetCoords(int action)
+	{
+		int ax = mx;
+		int ay = my;
+
+		switch (action)
+		{
+			case 0: ay = my - 1; break;
+			case 1: ay = my - 1; ax = mx + 1; break;
+			case 2: ax = mx + 1; break;
+			case 3: ay = my + 1; ax = mx + 1; break;
+			case 4: ay = my + 1; break;
+			case 5: ay = my + 1; ax = mx - 1; break;
+			case 6: ax = mx - 1; break;
+			case 7: ay = my - 1; ax = mx - 1; break;
+		}
+		return new int[] { ax, ay };
+	}
+
 	private List<int> GetState()
 	{
-		state = new List<int>(NUM_OBJECTS);
-		state[0] = mx;
-		state[1] = my;
-		state[2] = cx;
-		state[3] = cy;
-		state[4] = chx;
-		state[5] = chy;
+		state = new List<int>();
+		state.Add(mx);
+		state.Add(my);
+		state.Add(cx);
+		state.Add(cy);
+		state.Add(chx);
+		state.Add(chy);
 		return state;
 	}
 
@@ -140,10 +227,6 @@ public class RLWorld : MonoBehaviour
 			catScore++;
 			newReward -= deathPenalty;
 		}
-		if ((mx == hx) && (my == hy) && (gotCheese))
-		{
-			newReward += 100;
-		}
 
 		return newReward;
 	}
@@ -159,9 +242,6 @@ public class RLWorld : MonoBehaviour
 		d = GetRandomPos();
 		chx = d[0];
 		chy = d[1];
-		d = GetRandomPos();
-		hx = d[0];
-		hy = d[1];
 	}
 
 	private bool IsLegal(int x, int y)
@@ -187,10 +267,9 @@ public class RLWorld : MonoBehaviour
 		return new int[] { nx, ny };
 	}
 
-	private void MakeWAlls(int xDim, int yDim, int numWalls)
+	private void MakeWalls(int xDim, int yDim, int numWalls)
 	{
 		walls = new bool[xDim, yDim];
-
 		for (int t = 0; t < WALL_TRIALS; t++)
 		{
 			for (int i = 0; i < walls.GetLength(0); i++)
@@ -220,9 +299,18 @@ public class RLWorld : MonoBehaviour
 
 				walls[d[0], d[1]] = true;
 			}
+
 			if (IsValidWallSet(walls))
 			{
 				break;
+			}
+		}
+		Debug.Log("Walls");
+		for(int x = 0; x< walls.GetLength(0); x++)
+		{
+			for(int y = 0; y< walls.GetLength(1); y++)
+			{
+				Debug.Log("X: " + x + ", Y: " + y + ", ?: " + walls[x, y]);
 			}
 		}
 	}
@@ -236,7 +324,7 @@ public class RLWorld : MonoBehaviour
 		{
 			for (int j = 0; j < walls.GetLength(1); j++)
 			{
-				c[i, j] = w[i, j];
+				c[i, j] = walls[i, j];
 			}
 		}
 
@@ -245,7 +333,7 @@ public class RLWorld : MonoBehaviour
 		{
 			for (int j = 0; j < c.GetLength(1); j++)
 			{
-				if(!c[i, j])
+				if (!c[i, j])
 				{
 					FillNeighbors(c, i, j);
 					found = true;
@@ -253,18 +341,39 @@ public class RLWorld : MonoBehaviour
 				}
 			}
 		}
-		search:
-		if(!found)
+	search:
+		if (!found)
 		{
 			return false;
 		}
 
-		for(int i = 0; i< c.GetLength(0); i++)
+		for (int i = 0; i < c.GetLength(0); i++)
 		{
-			for(int j = 0; j < c.GetLength(1);j++)
+			for (int j = 0; j < c.GetLength(1); j++)
 			{
+				if (!c[i, j])
+				{
+					return false;
+				}
+			}
+		}
+		return true;
+	}
 
+	private void FillNeighbors(bool[,] c, int x, int y)
+	{
+		c[x, y] = true;
+
+		for (int i = x - 1; i <= x + 1; i++)
+		{
+			for (int j = y - 1; j <= y + 1; j++)
+			{
+				if ((i >= 0) && (i < c.GetLength(0)) && (j >= 0) && (j < c.GetLength(1)) && (!c[i, j]))
+				{
+					FillNeighbors(c, i, j);
+				}
 			}
 		}
 	}
 }
+

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-public class RLPolicy : MonoBehaviour
+public class RLPolicy
 {
 	private List<int> dimSize;
 	private List<double> qValues;
@@ -25,17 +25,22 @@ public class RLPolicy : MonoBehaviour
 
 	public void InitValues(double initValue)
 	{
-		List<int> state = new List<int>(dimSize.Count - 1);
-		for (int j = 0; j < states; j++)
-		{
-			qValues = MyQValues(state);
-			for (int i = 0; i < actions; i++)
-			{
-				qValues[i] = initValue;
-			}
+		//List<int> state = new List<int>();
+		//for (int i = 0; i < dimSize.Count - 1; i++)
+		//{
+		//	state.Add(0);
+		//}
+		//for (int j = 0; j < states; j++)
+		//{
+		//	qValues = new List<double>();
+		//	for (int i = 0; i < actions; i++)
+		//	{
+		//		qValues.Add(initValue);
+		//	}
+		//	qValuesTable.SetAt(state, qValues);
 
-			state = GetNextState(state);
-		}
+		//	state = GetNextState(state);
+		//}
 	}
 
 	private List<int> GetNextState(List<int> state)
@@ -66,7 +71,17 @@ public class RLPolicy : MonoBehaviour
 
 	private List<double> MyQValues(List<int> state)
 	{
-		return qValuesTable.GetAt(state);
+		List<double> vals = qValuesTable.GetAt(state);
+		if(vals == null)
+		{
+			vals = new List<double>();
+			for(int i = 0; i< actions; i++)
+			{
+				vals.Add(0);
+			}
+			qValuesTable.SetAt(state, vals);
+		}
+		return vals;
 	}
 
 	public List<double> GetQValuesAt(List<int> state)
@@ -154,7 +169,7 @@ public class RLPolicy : MonoBehaviour
 		qValues = GetQValuesAt(state);
 		for (int action = 0; action < qValues.Count; action++)
 		{
-			if(qValues[action] > maxQ)
+			if (qValues[action] > maxQ)
 			{
 				bestAction = action;
 				maxQ = qValues[action];
