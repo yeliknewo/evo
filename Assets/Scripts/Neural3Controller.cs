@@ -33,7 +33,7 @@ public class Neural3Controller : MonoBehaviour
 		targetOutputBatch.Add(targetOutputs);
 		network.UpdateBatch(inputBatch, targetOutputBatch, eta);
 		List<double> result = network.FeedForward(inputs);
-		foreach(double val in result)
+		foreach (double val in result)
 		{
 			Debug.Log(val);
 		}

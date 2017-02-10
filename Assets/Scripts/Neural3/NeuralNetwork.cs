@@ -136,7 +136,7 @@ namespace Neural3
 					Debug.Assert(nablaB.Count == deltaNablaB.Count, "NablaB and DeltaNablaB are different sizes");
 					for (int layerIndex = 0; layerIndex < nablaB.Count; layerIndex++)
 					{
-						Debug.Assert(nablaB[layerIndex].Count == deltaNablaB[layerIndex].Count, "NablaB Layer and DeltaNablaB Layer are different sizes");
+						Debug.Assert(nablaB[layerIndex].Count == deltaNablaB[layerIndex].Count, "NablaB Layer and DeltaNablaB Layer are different sizes, NablaB Layer Count: " + nablaB[layerIndex].Count + ", DeltaNablaB Layer count: " + deltaNablaB[layerIndex].Count);
 						for (int neuronIndex = 0; neuronIndex < nablaB[layerIndex].Count; neuronIndex++)
 						{
 							nablaB[layerIndex][neuronIndex] += deltaNablaB[layerIndex][neuronIndex];
@@ -227,13 +227,13 @@ namespace Neural3
 			{
 				List<double> z = zValues[zValues.Count - layerIndex];
 				List<double> sp = SigmoidPrimeList(z);
-				delta = DotMTV2V(weights[weights.Count - layerIndex + 1], delta);
+				delta = DotMV2V(weights[weights.Count - layerIndex], delta);
 				for (int deltaIndex = 0; deltaIndex < delta.Count; deltaIndex++)
 				{
 					delta[deltaIndex] *= sp[deltaIndex];
 				}
-				deltaNablaB[deltaNablaB.Count - layerIndex + 1] = delta;
-				deltaNablaW[deltaNablaW.Count - layerIndex + 1] = DotVV2M(delta, activations[activations.Count - layerIndex]);
+				deltaNablaB[deltaNablaB.Count - layerIndex] = delta;
+				deltaNablaW[deltaNablaW.Count - layerIndex] = DotVV2M(delta, activations[activations.Count - layerIndex - 1]);
 			}
 		}
 
@@ -294,7 +294,7 @@ namespace Neural3
 
 		private static double SigmoidPrime(double input)
 		{
-			return Sigmoid(input) / (1 - Sigmoid(input));
+			return Sigmoid(input) * (1 - Sigmoid(input));
 		}
 
 		private static List<double> SigmoidList(List<double> inputs)
@@ -309,7 +309,7 @@ namespace Neural3
 
 		private static double Sigmoid(double input)
 		{
-			return 1.0 / (1.0 + Mathf.Exp(-(float)input));
+			return 1.0 / (1.0 + Mathf.Exp((float)-input));
 		}
 	}
 }
