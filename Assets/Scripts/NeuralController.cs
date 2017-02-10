@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Neural1;
 
 [RequireComponent(typeof(Rigidbody))]
 public class NeuralController : MonoBehaviour
