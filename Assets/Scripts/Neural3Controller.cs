@@ -19,9 +19,15 @@ public class Neural3Controller : MonoBehaviour
 	private double eta;
 	[SerializeField]
 	private int seed;
+	[SerializeField]
+	private bool randomizeSeed;
 
 	void Start()
 	{
+		if (randomizeSeed)
+		{
+			seed = Random.Range(int.MinValue, int.MaxValue);
+		}
 		network = new NeuralNetwork(sizes, numInputs, seed);
 	}
 
