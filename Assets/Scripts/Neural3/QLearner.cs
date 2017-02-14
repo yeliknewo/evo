@@ -13,13 +13,9 @@ namespace QLearningNotSure
 		private double gamma;
 		private double eta; //learning rate
 		private int eValue; //e greedy
-		private int maxReward;
 
-		private double maxQValueTemp;
-
-		public QLearner(int maxReward, int eValue, double alpha, double gamma, double eta, List<Action> actions, List<int> hiddenSizes, int numInputs, int seed)
+		public QLearner(int eValue, double alpha, double gamma, double eta, List<Action> actions, List<int> hiddenSizes, int numInputs, int seed)
 		{
-			this.maxReward = maxReward;
 			this.eValue = eValue;
 			this.alpha = alpha;
 			this.gamma = gamma;
@@ -41,20 +37,19 @@ namespace QLearningNotSure
 			for (int i = 0; i < actions.Count; i++)
 			{
 				double q = GetQValue(state, i);
-				if (q > maxQ)
+				if (maxQ < q)
 				{
 					maxQ = q;
 					maxIndex = i;
 				}
 			}
-			maxQValueTemp = maxQ;
 			return maxIndex;
 		}
 
 		public void RunEpoch(World world, State state)
 		{
 			int count = 0;
-			while (!world.IsTerminal(state) && count < 1000)
+			while (!world.IsTerminal(state))
 			{
 				count++;
 				int actionIndex;
@@ -67,10 +62,16 @@ namespace QLearningNotSure
 					actionIndex = GetNextActionIndex(state);
 				}
 				StateReward stateReward = world.GetNextStateReward(state, actions[actionIndex]);
+				State nextState = stateReward.GetState();
+				int reward = stateReward.GetReward();
+				if (reward > 0)
+				{
+				}
 				double qValue = GetQValue(state, actionIndex);
-				double newQValue = GetNewQValue(maxQValueTemp, qValue, alpha, stateReward.GetReward(), gamma);
+				double maxQValue = GetMaxQValue(nextState);
+				double newQValue = GetNewQValue(maxQValue, qValue, alpha, reward, gamma);
 				UpdateNetwork(state, actionIndex, newQValue, eta);
-				state = stateReward.GetState();
+				state = nextState;
 			}
 		}
 
@@ -87,17 +88,18 @@ namespace QLearningNotSure
 
 		private double GetNewQValue(double maxQ, double q, double alpha, int reward, double gamma)
 		{
-			return q + alpha * (((double)reward / (double)(maxReward)) + gamma * maxQ - q);
+			return q + alpha * (reward + gamma * maxQ - q);
 		}
 
-		private double GetMaxValue(List<double> values)
+		private double GetMaxQValue(State state)
 		{
 			double max = double.MinValue;
-			foreach (double val in values)
+			for (int i = 0; i < actions.Count; i++)
 			{
-				if (val > max)
+				double qVal = GetQValue(state, i);
+				if (max < qVal)
 				{
-					max = val;
+					max = qVal;
 				}
 			}
 			return max;
@@ -122,7 +124,6 @@ namespace QLearningNotSure
 
 		private double GetQValue(State state, int actionIndex)
 		{
-
 			return network.FeedForward(GetInput(state, actionIndex))[0];
 		}
 	}
@@ -225,7 +226,7 @@ namespace QLearningNotSure
 		public StateReward GetNextStateReward(State state, Action action)
 		{
 			State nextState = GetNextState(state, action);
-			int reward = GetReward(nextState);
+			int reward = GetReward(nextState, state);
 			return new StateReward(nextState, reward);
 		}
 
@@ -236,7 +237,7 @@ namespace QLearningNotSure
 			return new State(nextPlayerPos, nextGoalPos, mapSize);
 		}
 
-		private int GetReward(State state)
+		private int GetReward(State state, State lastState)
 		{
 			if (HasWon(state))
 			{
@@ -248,7 +249,8 @@ namespace QLearningNotSure
 			}
 			else
 			{
-				return stepReward;
+				return Mathf.RoundToInt((-Vector2.Distance(state.GetPlayerPos(), state.GetGoalPos()) + Vector2.Distance(lastState.GetPlayerPos(), lastState.GetGoalPos())) * 100);
+				//return stepReward;
 			}
 		}
 

@@ -52,7 +52,7 @@ public class QNeural3Controller : MonoBehaviour
 	void Start()
 	{
 		world = new World(mapSize, winDistance, winReward, stepReward, loseReward);
-		startingState = new State(Random.insideUnitCircle * mapSize, Random.insideUnitCircle * mapSize, mapSize);
+		startingState = new State(Random.insideUnitCircle * mapSize, Vector2.zero, mapSize);
 		actions = new List<Action>();
 		for (int x = -1; x <= 1; x++)
 		{
@@ -64,7 +64,7 @@ public class QNeural3Controller : MonoBehaviour
 				}
 			}
 		}
-		learner = new QLearner(winReward, eValue, alpha, gamma, eta, actions, hiddenSizes, numInputs, seed);
+		learner = new QLearner(eValue, alpha, gamma, eta, actions, hiddenSizes, numInputs, seed);
 		training = true;
 	}
 

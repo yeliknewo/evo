@@ -14,7 +14,7 @@ namespace CatAndMouse
 		{
 			this.dimSize = dimSize;
 
-			qValuesTable = new EndlessArray<List<double>>(dimSize);
+			qValuesTable = new EndlessArray<List<double>>(dimSize, default(List<double>), default(List<double>));
 
 			states = dimSize[0];
 			for (int j = 1; j < dimSize.Count - 1; j++)
