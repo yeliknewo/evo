@@ -180,8 +180,8 @@ namespace Tabular1
 			List<int> inputs = new List<int>();
 			inputs.Add((int)playerPos.x);
 			inputs.Add((int)playerPos.y);
-			inputs.Add((int)goalPos.x);
-			inputs.Add((int)goalPos.y);
+			//inputs.Add((int)goalPos.x);
+			//inputs.Add((int)goalPos.y);
 			return inputs;
 		}
 
@@ -257,8 +257,15 @@ namespace Tabular1
 			}
 			else
 			{
-				return stepReward;
+				return stepReward * GetMod(nextState);
 			}
+		}
+
+		private int GetMod(State state)
+		{
+			int x = (int)state.GetPlayerPos().x + 1;
+			int y = (int)state.GetPlayerPos().y + 1;
+			return x % y + y % x + 1;
 		}
 
 		private bool HasWon(State state)

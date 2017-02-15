@@ -55,8 +55,8 @@ public class Tabular1Controller : MonoBehaviour
 		List<int> tableDimensions = new List<int>();
 		tableDimensions.Add(mapSize);
 		tableDimensions.Add(mapSize);
-		tableDimensions.Add(mapSize);
-		tableDimensions.Add(mapSize);
+		//tableDimensions.Add(mapSize);
+		//tableDimensions.Add(mapSize);
 		tableDimensions.Add(actions.Count);
 		learner = new QLearner(actions, tableDimensions, startingQ);
 		nextState = GetRandomState();
@@ -69,7 +69,7 @@ public class Tabular1Controller : MonoBehaviour
 
 	private State GetRandomState()
 	{
-		return new State(new Vector2(Random.Range(0, mapSize), Random.Range(0, mapSize)), new Vector2(Random.Range(0, mapSize), Random.Range(0, mapSize)));
+		return new State(new Vector2(Random.Range(0, mapSize), Random.Range(0, mapSize)), Vector2.one * mapSize / 2);//new Vector2(Random.Range(0, mapSize), Random.Range(0, mapSize)));
 	}
 
 	void Update()
@@ -106,14 +106,19 @@ public class Tabular1Controller : MonoBehaviour
 		SpriteRenderer renderer = background.GetComponent<SpriteRenderer>();
 		Texture2D texture = new Texture2D(mapSize + 1, mapSize + 1);
 		double maxQ = double.MinValue;
+		double minQ = double.MaxValue;
 		for (int x = 0; x <= mapSize; x++)
 		{
 			for (int y = 0; y <= mapSize; y++)
 			{
-				double upperQ = learner.GetMaxQValue(nextState.MovePlayerTo(new Vector2(x, y)));
-				if (maxQ < upperQ)
+				double q = learner.GetMaxQValue(nextState.MovePlayerTo(new Vector2(x, y)));
+				if (maxQ < q)
 				{
-					maxQ = upperQ;
+					maxQ = q;
+				}
+				if (minQ > q)
+				{
+					minQ = q;
 				}
 			}
 		}
@@ -122,7 +127,7 @@ public class Tabular1Controller : MonoBehaviour
 			for (int y = 0; y <= mapSize; y++)
 			{
 				double bestQ = learner.GetMaxQValue(nextState.MovePlayerTo(new Vector2(x, y)));
-				float val = (float)(bestQ / maxQ);
+				float val = (float)((bestQ - minQ) / (maxQ - minQ));
 				Color color = Color.Lerp(Color.red, Color.green, val);
 				texture.SetPixel(x, y, color);
 			}

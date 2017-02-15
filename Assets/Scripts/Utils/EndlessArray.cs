@@ -61,7 +61,7 @@ public class EndlessArray<T>
 			{
 				return -1;
 			}
-			pow += (int)Mathf.Pow(dimSizes[i], i);
+			pow += (int)Mathf.Pow(dimSizes[i] * 10, i);
 			index += indices[i] * pow;
 		}
 		return index;
