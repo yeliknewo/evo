@@ -22,8 +22,6 @@ public class Tabular1Controller : MonoBehaviour
 	[SerializeField]
 	private int epochsPerEra;
 	[SerializeField]
-	private int maxMoves;
-	[SerializeField]
 	private int eras;
 	[SerializeField]
 	private float counterStep;
@@ -32,10 +30,10 @@ public class Tabular1Controller : MonoBehaviour
 	[SerializeField]
 	private GameObject background;
 
+	private int internalEras;
+
 	private QLearner learner;
 	private World world;
-
-	private State startingState;
 
 	private State nextState;
 
@@ -48,7 +46,7 @@ public class Tabular1Controller : MonoBehaviour
 
 	void Start()
 	{
-		world = new World(mapSize, maxMoves, winReward, stepReward, loseReward);
+		world = new World(mapSize);
 		List<Action> actions = new List<Action>();
 		actions.Add(new Action(Vector2.up));
 		actions.Add(new Action(Vector2.down));
@@ -57,11 +55,11 @@ public class Tabular1Controller : MonoBehaviour
 		List<int> tableDimensions = new List<int>();
 		tableDimensions.Add(mapSize);
 		tableDimensions.Add(mapSize);
-		tableDimensions.Add(maxMoves);
+		tableDimensions.Add(mapSize);
+		tableDimensions.Add(mapSize);
 		tableDimensions.Add(actions.Count);
-		learner = new QLearner(alpha, gamma, actions, tableDimensions, startingQ);
-		startingState = new State(Vector2.one * (mapSize - 1), 0);
-		nextState = startingState;
+		learner = new QLearner(actions, tableDimensions, startingQ);
+		nextState = GetRandomState();
 		playerPrefab = Instantiate(playerPrefab);
 		counter = Time.time;
 		background.transform.position = Vector2.one * mapSize / 2;
@@ -69,40 +67,37 @@ public class Tabular1Controller : MonoBehaviour
 		FindObjectOfType<Camera>().orthographicSize = mapSize / 2.0f;
 	}
 
+	private State GetRandomState()
+	{
+		return new State(new Vector2(Random.Range(0, mapSize), Random.Range(0, mapSize)), new Vector2(Random.Range(0, mapSize), Random.Range(0, mapSize)));
+	}
+
 	void Update()
 	{
-		if (eras % erasPerRun == 0)
+		world.UpdateWorld(winReward, stepReward, loseReward);
+		if (internalEras >= erasPerRun)
 		{
 			if (counter <= Time.time)
 			{
 				UpdateBackground();
 				counter = Time.time + counterStep;
-				State state = nextState;
-				Action action = learner.GetNextAction(state);
-				int actionIndex = learner.GetNextActionIndex(state);
-				StateReward stateReward = world.GetNextStateReward(state, action);
-				nextState = stateReward.GetState();
-				int reward = stateReward.GetReward();
-				double qValue = learner.GetQValue(state, actionIndex);
-				double maxQValue = learner.GetMaxQValue(nextState);
-				double newQValue = learner.GetNewQValue(maxQValue, qValue, alpha, gamma, reward);
-				learner.UpdateQValues(state, actionIndex, newQValue);
+				nextState = learner.RunStep(world, nextState, eValue, alpha, gamma);
 				playerPrefab.transform.position = nextState.GetPlayerPos();
 				if (world.IsTerminal(nextState))
 				{
-					startingState = new State(new Vector2(Random.Range(0, mapSize), Random.Range(0, mapSize)), 0);
-					nextState = startingState;
-					eras++;
+					nextState = GetRandomState();
+					internalEras = 0;
 				}
 			}
 		}
 		else
 		{
-			//for (int epochs = 0; epochs < epochsPerEra; epochs++)
-			//{
-			//	learner.RunEpoch(world, startingState, eValue);
-			//}
+			for (int epochs = 0; epochs < epochsPerEra; epochs++)
+			{
+				learner.RunEpoch(world, GetRandomState(), eValue, alpha, gamma);
+			}
 			eras++;
+			internalEras++;
 		}
 	}
 
@@ -111,20 +106,14 @@ public class Tabular1Controller : MonoBehaviour
 		SpriteRenderer renderer = background.GetComponent<SpriteRenderer>();
 		Texture2D texture = new Texture2D(mapSize + 1, mapSize + 1);
 		double maxQ = double.MinValue;
-		double minQ = double.MaxValue;
 		for (int x = 0; x <= mapSize; x++)
 		{
 			for (int y = 0; y <= mapSize; y++)
 			{
-				double upperQ = learner.GetMaxQValue(new State(new Vector2(x, y), 0));
-				double lowerQ = learner.GetMaxQValue(new State(new Vector2(x, y), 0));
+				double upperQ = learner.GetMaxQValue(nextState.MovePlayerTo(new Vector2(x, y)));
 				if (maxQ < upperQ)
 				{
 					maxQ = upperQ;
-				}
-				if (minQ > lowerQ)
-				{
-					minQ = lowerQ;
 				}
 			}
 		}
@@ -132,18 +121,9 @@ public class Tabular1Controller : MonoBehaviour
 		{
 			for (int y = 0; y <= mapSize; y++)
 			{
-				Color color;
-				double bestQ = learner.GetMaxQValue(new State(new Vector2(x, y), 0));
-				//if (bestQ < (maxQ + minQ) / 2)
-				//{
-				//	float val = (float)(bestQ / minQ);
-				//	color = Color.Lerp(Color.grey, Color.red, val);
-				//}
-				//else
-				{
-					float val = (float)(bestQ / maxQ);
-					color = Color.Lerp(Color.red, Color.green, val);
-				}
+				double bestQ = learner.GetMaxQValue(nextState.MovePlayerTo(new Vector2(x, y)));
+				float val = (float)(bestQ / maxQ);
+				Color color = Color.Lerp(Color.red, Color.green, val);
 				texture.SetPixel(x, y, color);
 			}
 		}

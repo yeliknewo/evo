@@ -54,13 +54,15 @@ public class EndlessArray<T>
 	private int GetIndex(List<int> indices)
 	{
 		int index = 0;
+		int pow = 0;
 		for (int i = 0; i < indices.Count; i++)
 		{
 			if (indices[i] >= dimSizes[i] || indices[i] < 0)
 			{
 				return -1;
 			}
-			index += indices[i] * (int)Mathf.Pow(dimSizes[i] * 10, i);
+			pow += (int)Mathf.Pow(dimSizes[i], i);
+			index += indices[i] * pow;
 		}
 		return index;
 	}
