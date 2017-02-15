@@ -79,7 +79,7 @@ public class Tabular1Controller : MonoBehaviour
 		{
 			if (counter <= Time.time)
 			{
-				UpdateBackground();
+				
 				counter = Time.time + counterStep;
 				nextState = learner.RunStep(world, nextState, eValue, alpha, gamma);
 				playerPrefab.transform.position = nextState.GetPlayerPos();
@@ -87,6 +87,7 @@ public class Tabular1Controller : MonoBehaviour
 				{
 					nextState = GetRandomState();
 					internalEras = 0;
+					UpdateBackground();
 				}
 			}
 		}
