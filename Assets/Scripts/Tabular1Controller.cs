@@ -6,6 +6,8 @@ using Tabular1;
 public class Tabular1Controller : MonoBehaviour
 {
 	[SerializeField]
+	private bool runDemo;
+	[SerializeField]
 	private int mapSize;
 	[SerializeField]
 	private int winReward;
@@ -55,7 +57,7 @@ public class Tabular1Controller : MonoBehaviour
 		List<int> tableDimensions = new List<int>();
 		tableDimensions.Add(mapSize);
 		tableDimensions.Add(mapSize);
-		//tableDimensions.Add(mapSize);
+		tableDimensions.Add(mapSize);
 		//tableDimensions.Add(mapSize);
 		tableDimensions.Add(actions.Count);
 		learner = new QLearner(actions, tableDimensions, startingQ);
@@ -69,17 +71,26 @@ public class Tabular1Controller : MonoBehaviour
 
 	private State GetRandomState()
 	{
-		return new State(new Vector2(Random.Range(0, mapSize), Random.Range(0, mapSize)), Vector2.one * mapSize / 2);//new Vector2(Random.Range(0, mapSize), Random.Range(0, mapSize)));
+		return new State(new Vector2(Random.Range(0, mapSize), Random.Range(0, mapSize)), new Vector2(Random.Range(0, mapSize), Random.Range(0, 1)));
 	}
 
 	void Update()
 	{
 		world.UpdateWorld(winReward, stepReward, loseReward);
-		if (internalEras >= erasPerRun)
+
+		if (runDemo)
 		{
-			if (counter <= Time.time)
+			if (internalEras < erasPerRun)
 			{
-				
+				for (int epochs = 0; epochs < epochsPerEra; epochs++)
+				{
+					learner.RunEpoch(world, GetRandomState(), eValue, alpha, gamma);
+				}
+				eras++;
+				internalEras++;
+			}
+			while (internalEras >= erasPerRun && counter <= Time.time)
+			{
 				counter = Time.time + counterStep;
 				nextState = learner.RunStep(world, nextState, eValue, alpha, gamma);
 				playerPrefab.transform.position = nextState.GetPlayerPos();
@@ -97,8 +108,9 @@ public class Tabular1Controller : MonoBehaviour
 			{
 				learner.RunEpoch(world, GetRandomState(), eValue, alpha, gamma);
 			}
+			nextState = GetRandomState();
 			eras++;
-			internalEras++;
+			UpdateBackground();
 		}
 	}
 
