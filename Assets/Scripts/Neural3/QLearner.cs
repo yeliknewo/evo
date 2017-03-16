@@ -249,8 +249,8 @@ namespace QLearningNotSure
 			}
 			else
 			{
-				return Mathf.RoundToInt((-Vector2.Distance(state.GetPlayerPos(), state.GetGoalPos()) + Vector2.Distance(lastState.GetPlayerPos(), lastState.GetGoalPos())) * 100);
-				//return stepReward;
+				//return Mathf.RoundToInt((-Vector2.Distance(state.GetPlayerPos(), state.GetGoalPos()) + Vector2.Distance(lastState.GetPlayerPos(), lastState.GetGoalPos())) * 100);
+				return stepReward;
 			}
 		}
 
