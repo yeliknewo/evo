@@ -60,6 +60,8 @@ public class Neural4Controller : MonoBehaviour
 	private GameObject goalPrefab;
 	[SerializeField]
 	private GameObject playerPrefab;
+	[SerializeField]
+	private GameObject background;
 
 	void Start()
 	{
@@ -85,11 +87,61 @@ public class Neural4Controller : MonoBehaviour
 		GameObject player = Instantiate(playerPrefab);
 		player.transform.position = nextState.GetPlayerPos();
 		playerPrefab = player;
+		background.transform.position = (Vector3)(Vector2.one * mapSize / 2) + Vector3.forward;
+		FindObjectOfType<Camera>().transform.position = (Vector3)(Vector2.one * mapSize / 2) + Vector3.forward * FindObjectOfType<Camera>().transform.position.z;
+		FindObjectOfType<Camera>().orthographicSize = mapSize / 2.0f;
+	}
+
+	private void UpdateBackground()
+	{
+		SpriteRenderer renderer = background.GetComponent<SpriteRenderer>();
+		Texture2D texture = new Texture2D((int)mapSize + 1, (int)mapSize + 1);
+		double maxQ = double.MinValue;
+		double minQ = double.MaxValue;
+		for (int x = 0; x <= mapSize; x++)
+		{
+			for (int y = 0; y <= mapSize; y++)
+			{
+				double q = learner.GetMaxQValue(nextState.MovePlayerTo(new Vector2(x, y)));
+				if (maxQ < q)
+				{
+					maxQ = q;
+				}
+				if (minQ > q)
+				{
+					minQ = q;
+				}
+			}
+		}
+		for (int x = 0; x <= mapSize; x++)
+		{
+			for (int y = 0; y <= mapSize; y++)
+			{
+				double bestQ = learner.GetMaxQValue(nextState.MovePlayerTo(new Vector2(x, y)));
+				float val;
+				if (maxQ == minQ) {
+					val = 0.5f;
+				}
+				else
+				{
+					val = (float)((bestQ - minQ) / (maxQ - minQ));
+				}
+				Color color = Color.Lerp(Color.red, Color.green, val);
+				texture.SetPixel(x, y, color);
+			}
+		}
+		texture.filterMode = FilterMode.Point;
+		texture.wrapMode = TextureWrapMode.Clamp;
+		texture.Apply();
+		Rect rect = new Rect(Vector2.zero, Vector2.one * mapSize);
+		Vector2 pivot = Vector2.one / 2;
+		Sprite sprite = Sprite.Create(texture, rect, pivot, 1);
+		renderer.sprite = sprite;
 	}
 
 	State GetRandomState()
 	{
-		return new State(Random.insideUnitCircle * mapSize, Vector2.zero, mapSize);
+		return new State(new Vector2(Random.Range(0.0f, mapSize), Random.Range(0.0f, mapSize)), Vector2.one * mapSize / 2.0f, mapSize);
 	}
 
 	void Update()
@@ -104,6 +156,7 @@ public class Neural4Controller : MonoBehaviour
 				}
 				eras++;
 				internalEras++;
+				UpdateBackground();
 			}
 			while (internalEras >= erasPerRun && counter <= Time.time)
 			{
@@ -115,6 +168,7 @@ public class Neural4Controller : MonoBehaviour
 				{
 					nextState = GetRandomState();
 					internalEras = 0;
+					UpdateBackground();
 				}
 			}
 		}
@@ -125,6 +179,7 @@ public class Neural4Controller : MonoBehaviour
 				learner.RunEpoch(world, GetRandomState(), eValue, alpha, gamma, eta, mom);
 			}
 			eras++;
+			UpdateBackground();
 		}
 	}
 }

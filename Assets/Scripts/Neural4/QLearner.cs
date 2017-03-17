@@ -10,10 +10,17 @@ namespace QLearningNeural4
 		private BackPropNeuralNet network;
 		private List<Action> actions;
 
-		public QLearner(List<Action> actions, int hiddenLayer, int numInputs, int seed)
+		public QLearner(List<Action> actions, int numHidden, int numInputs, int seed)
 		{
 			this.actions = actions;
-			network = new BackPropNeuralNet(numInputs, hiddenLayer, actions.Count);
+			network = new BackPropNeuralNet(numInputs, numHidden, actions.Count);
+			int numWeights = (numInputs * numHidden) + (numHidden * actions.Count) + (numHidden + actions.Count);
+			List<double> weights = new List<double>();
+			for(int i = 0; i<numWeights;i++)
+			{
+				weights.Add(Random.Range(-1.0f, 1.0f));
+			}
+			network.SetWeights(weights.ToArray());
 		}
 
 		public Action GetNextAction(State state)
@@ -53,7 +60,7 @@ namespace QLearningNeural4
 			State nextState = stateReward.GetState();
 			int reward = stateReward.GetReward();
 			double qValue = qValues[actionIndex];
-			double maxQValue = GetMaxQValue(nextState, qValues);
+			double maxQValue = GetMaxQValue(qValues);
 			double newQValue = GetNewQValue(maxQValue, qValue, alpha, reward, gamma);
 			UpdateNetwork(state, qValues, actionIndex, newQValue, eta, mom);
 			return nextState;
@@ -101,7 +108,13 @@ namespace QLearningNeural4
 			return q + alpha * (reward + gamma * maxQ - q);
 		}
 
-		private double GetMaxQValue(State state, List<double> qValues)
+		public double GetMaxQValue(State state)
+		{
+			double val = GetMaxQValue(GetQValues(state));
+			return val;
+		}
+
+		private double GetMaxQValue(List<double> qValues)
 		{
 			double max = double.MinValue;
 			for (int i = 0; i < qValues.Count; i++)
@@ -123,7 +136,8 @@ namespace QLearningNeural4
 		private List<double> GetQValues(State state)
 		{
 			List<double> output = new List<double>();
-			output.AddRange(network.ComputeOutputs(GetInput(state).ToArray()));
+			List<double> inputs = GetInput(state);
+			output.AddRange(network.ComputeOutputs(inputs.ToArray()));
 			return output;
 		}
 	}
@@ -176,11 +190,16 @@ namespace QLearningNeural4
 		public List<double> GetInputs()
 		{
 			List<double> inputs = new List<double>();
-			inputs.Add(playerPos.x / mapSize);
-			inputs.Add(playerPos.y / mapSize);
-			inputs.Add(goalPos.x / mapSize);
-			inputs.Add(goalPos.y / mapSize);
+			inputs.Add((playerPos.x / mapSize) * 2 - 1);
+			inputs.Add((playerPos.y / mapSize) * 2 - 1);
+			inputs.Add((goalPos.x / mapSize) * 2 - 1);
+			inputs.Add((goalPos.y / mapSize) * 2 - 1);
 			return inputs;
+		}
+
+		public State MovePlayerTo(Vector2 newPlayerPos)
+		{
+			return new State(newPlayerPos, this.goalPos, mapSize);
 		}
 	}
 
@@ -261,7 +280,7 @@ namespace QLearningNeural4
 
 		private bool HasLost(State state)
 		{
-			return state.GetPlayerPos().magnitude > mapSize;
+			return state.GetPlayerPos().x <= 0 || state.GetPlayerPos().y <= 0 || state.GetPlayerPos().x >= mapSize - 1|| state.GetPlayerPos().y >= mapSize - 1;
 		}
 
 		public bool IsTerminal(State state)
