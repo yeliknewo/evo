@@ -3,32 +3,31 @@ using System.Collections.Generic;
 using UnityEngine;
 using BackProp;
 
-namespace QLearningNotSure
+namespace QLearningNeural4
 {
 	public class QLearner
 	{
 		private BackPropNeuralNet network;
 		private List<Action> actions;
 
-		public QLearner(int eValue, double alpha, double gamma, double eta, List<Action> actions, List<int> hiddenSizes, int numInputs, int seed)
+		public QLearner(List<Action> actions, int hiddenLayer, int numInputs, int seed)
 		{
 			this.actions = actions;
-			//hiddenSizes.Add(1);
-			network = new BackPropNeuralNet(numInputs + actions.Count, hiddenSizes[0], 1);
+			network = new BackPropNeuralNet(numInputs, hiddenLayer, actions.Count);
 		}
 
 		public Action GetNextAction(State state)
 		{
-			return actions[GetNextActionIndex(state)];
+			return actions[GetNextActionIndex(state, GetQValues(state))];
 		}
 
-		private int GetNextActionIndex(State state)
+		private int GetNextActionIndex(State state, List<double> qValues)
 		{
 			double maxQ = double.MinValue;
 			int maxIndex = 0;
-			for (int i = 0; i < actions.Count; i++)
+			for (int i = 0; i < qValues.Count; i++)
 			{
-				double q = GetQValue(state, i);
+				double q = qValues[i];
 				if (maxQ < q)
 				{
 					maxQ = q;
@@ -40,6 +39,7 @@ namespace QLearningNotSure
 
 		public State RunStep(World world, State state, int eValue, double alpha, double gamma, double eta, double mom)
 		{
+			List<double> qValues = GetQValues(state);
 			int actionIndex;
 			if (Random.Range(0, eValue) == 0)
 			{
@@ -47,15 +47,15 @@ namespace QLearningNotSure
 			}
 			else
 			{
-				actionIndex = GetNextActionIndex(state);
+				actionIndex = GetNextActionIndex(state, qValues);
 			}
 			StateReward stateReward = world.GetNextStateReward(state, actions[actionIndex]);
 			State nextState = stateReward.GetState();
 			int reward = stateReward.GetReward();
-			double qValue = GetQValue(state, actionIndex);
-			double maxQValue = GetMaxQValue(nextState);
+			double qValue = qValues[actionIndex];
+			double maxQValue = GetMaxQValue(nextState, qValues);
 			double newQValue = GetNewQValue(maxQValue, qValue, alpha, reward, gamma);
-			UpdateNetwork(state, actionIndex, newQValue, eta, mom);
+			UpdateNetwork(state, qValues, actionIndex, newQValue, eta, mom);
 			return nextState;
 		}
 
@@ -67,7 +67,7 @@ namespace QLearningNotSure
 			}
 		}
 
-		private void UpdateNetwork(State state, int actionIndex, double newQValue, double eta, double mom)
+		private void UpdateNetwork(State state, List<double> qValues, int actionIndex, double newQValue, double eta, double mom)
 		{
 			//List<List<double>> targetOutputs = new List<List<double>>();
 			//List<List<double>> inputs = new List<List<double>>();
@@ -88,19 +88,10 @@ namespace QLearningNotSure
 			//		targetOutputs.Add(newQValues);
 			//	}
 			//}
-			for (int i = 0; i < actions.Count; i++)
-			{
-				List<double> targetOutputs = new List<double>();
-				if (i == actionIndex)
-				{
-					targetOutputs.Add(newQValue);
-				}
-				else
-				{
-					targetOutputs.Add(GetQValue(state, i));
-				}
-				network.UpdateWeights(targetOutputs.ToArray(), eta, mom);
-			}
+			List<double> targetOutputs = new List<double>();
+			targetOutputs.AddRange(qValues);
+			targetOutputs[actionIndex] = newQValue;
+			network.UpdateWeights(targetOutputs.ToArray(), eta, mom);
 
 			//network.UpdateBatch(inputs, targetOutputs, eta);
 		}
@@ -110,12 +101,12 @@ namespace QLearningNotSure
 			return q + alpha * (reward + gamma * maxQ - q);
 		}
 
-		private double GetMaxQValue(State state)
+		private double GetMaxQValue(State state, List<double> qValues)
 		{
 			double max = double.MinValue;
-			for (int i = 0; i < actions.Count; i++)
+			for (int i = 0; i < qValues.Count; i++)
 			{
-				double qVal = GetQValue(state, i);
+				double qVal = qValues[i];
 				if (max < qVal)
 				{
 					max = qVal;
@@ -124,26 +115,16 @@ namespace QLearningNotSure
 			return max;
 		}
 
-		private List<double> GetInput(State state, int actionIndex)
+		private List<double> GetInput(State state)
 		{
-			List<double> input = state.GetInputs();
-			for (int i = 0; i < actions.Count; i++)
-			{
-				if (i == actionIndex)
-				{
-					input.Add(1.0);
-				}
-				else
-				{
-					input.Add(0.0);
-				}
-			}
-			return input;
+			return state.GetInputs();
 		}
 
-		private double GetQValue(State state, int actionIndex)
+		private List<double> GetQValues(State state)
 		{
-			return network.ComputeOutputs(GetInput(state, actionIndex).ToArray())[0];
+			List<double> output = new List<double>();
+			output.AddRange(network.ComputeOutputs(GetInput(state).ToArray()));
+			return output;
 		}
 	}
 

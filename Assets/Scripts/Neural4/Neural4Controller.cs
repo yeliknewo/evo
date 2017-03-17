@@ -1,9 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using QLearningNotSure;
+using QLearningNeural4;
 
-public class QNeural3Controller : MonoBehaviour
+public class Neural4Controller : MonoBehaviour
 {
 	private QLearner learner;
 	private List<Action> actions;
@@ -20,7 +20,7 @@ public class QNeural3Controller : MonoBehaviour
 	[SerializeField]
 	private double mom;
 	[SerializeField]
-	private List<int> hiddenSizes;
+	private int hiddenSize;
 	[SerializeField]
 	private int numInputs;
 	[SerializeField]
@@ -77,7 +77,7 @@ public class QNeural3Controller : MonoBehaviour
 				}
 			}
 		}
-		learner = new QLearner(eValue, alpha, gamma, eta, actions, hiddenSizes, numInputs, seed);
+		learner = new QLearner(actions, hiddenSize, numInputs, seed);
 
 		GameObject goal = Instantiate(goalPrefab);
 		goal.transform.position = nextState.GetGoalPos();
@@ -120,7 +120,7 @@ public class QNeural3Controller : MonoBehaviour
 		}
 		else
 		{
-			for(int epochs = 0; epochs < epochsPerEra; epochs++)
+			for (int epochs = 0; epochs < epochsPerEra; epochs++)
 			{
 				learner.RunEpoch(world, GetRandomState(), eValue, alpha, gamma, eta, mom);
 			}
